@@ -16,18 +16,46 @@ uv run playwright install chromium
 Before running the project, you need to set the environment variables in the `.env` file. This includes:
 
 1. `BASE_URL`: The URL of the application for which you want to generate E2E tests.
-2. `APP_NAME`: An identifier used to namespace that application's database records and report.
-3. `TEMP_DIR`: An optional directory for screenshots and temporary files (defaults to `./tmp`).
+2. `APP_NAME`: An identifier used to namespace that application's local database records.
+3. `OUTPUT_DIR`: The root for domain-scoped crawl artifacts (defaults to `./output`).
 4. `HEADLESS`: Whether Chromium runs without a visible window (defaults to `false`).
-5. `ANTHROPIC_API_KEY`: The API key for the Anthropic platform. You can get this by signing up at [Anthropic](https://anthropic.com/).
-6. `OPENAI_API_KEY`: The API key used for OpenAI models and embeddings.
-7. `ATLAS_URI`: The MongoDB Atlas URI for storing the Action-Feature Database (AFD) and Feature Database (FD).
+5. `LLM_MODEL`: The single LangChain `provider:model` identifier used for every chat inference.
+   Because state context uses screenshots, this model must support image input.
+6. `LLM_BASE_URL` and `LLM_API_KEY`: Optional connection settings for a local or hosted model.
+7. `LLM_TEMPERATURE`, `LLM_MAX_TOKENS`, `LLM_TIMEOUT`, and `LLM_MAX_RETRIES`: Optional invocation
+   settings.
+8. `EMBEDDING_MODEL` and `EMBEDDING_DIMENSIONS`: The embedding model and its exact output size.
+9. `EMBEDDING_BASE_URL` and `EMBEDDING_API_KEY`: Optional local embedding endpoint settings.
+10. Provider-specific keys such as `OPENAI_API_KEY` remain supported by LangChain integrations.
+11. `DATABASE_PATH`: An optional SQLite database path. By default it is
+   `output/<domain>/autoe2e.sqlite3`.
 
 Then you can run the project using the following command:
 
 ```bash
 uv run python main.py
 ```
+
+Each crawl writes state snapshots and transition network logs below
+`output/<domain>/runs/<run-id>/`. SQLite is the authoritative graph and artifact index; a small
+`run.json` tells standalone tools how to open it. See [the output format](docs/output-format.md)
+for the complete schema. Functionality and action mappings use the same local database, with
+`sqlite-vec` providing vector similarity search; no database server is required.
+Each run writes all log levels to its single `run.log` file in the same run directory.
+
+All analysis and classification tasks share the same configured chat model. The embedding model
+remains separate because it produces vectors rather than chat responses, and its configured
+dimension defines the `sqlite-vec` index schema.
+
+Persistence is isolated under `autoe2e/storage`: `Database` owns the SQLite connection and schema,
+`FunctionalityStore` exposes functionality and action-index operations, and `RunStore` serializes
+run metadata and browser artifacts. `main.py` constructs and injects these dependencies explicitly;
+importing a module no longer opens a database connection.
+
+Feature inference is isolated under `autoe2e/features`. `FeatureService` coordinates state-context
+and action-feature extraction, semantic matching, indexing, scoring, and finality. Crawler-specific
+LLM decisions remain under `autoe2e/crawler`: `action_policy.py` guards irreversible actions and
+`form_filling.py` generates values for executable forms.
 
 ## Development
 
@@ -39,34 +67,6 @@ uv run ruff format .
 ```
 
 ## LLM Prompts
-The prompts used for different parts of our workflow is available in `./autoe2e/prompts.py` file. We use the following prompt for context extraction:
-
-> Given the provided information about a webpage, your task is to provide a brief and abstract description of the webpage's primary purpose or function.
-> Output Guidelines:
-> * Brevity: Keep the description concise (aim for 1-2 sentences).
-> * Abstraction: Avoid specific details or variable names. Use general terms to describe the content and function. (Example: Instead of "a page showing results for searching for a TV," say "a page displaying search results for a product query.")
-> * Focus on Purpose: Prioritize describing the main intent of the page. What is it designed for the user to do or learn?
-> * No Extra Explanations: Just provide the context. Avoid adding commentary or assumptions.
-
-
-and the following for feature extraction:
-
-
-> Given a webpage's purpose and content (webpage_context), the outerHTML of an action element (action_element), and optionally the user's last action that led to this state, your task is to infer the most likely functionalities associated with that action element.
-> These functionalities should be user-centric actions that produce measurable outcomes within the application, are testable through E2E testing, and are essential to the presence of the action element.
-> Output Format:
-> Your is enclosed in two tags:
-> \<Reasoning>:
-> - An enumerated list of at most five functionalities potentially connected to the element.
-> - For each functionality, answer the following questions concisely:
->     1. Would developers write E2E test cases for this in the real world? It should be non-navigational, not menu-related, and not validation.
->     2. Is the functionality a final user goal in itself or is it always a step in doing something else?
->     3. Is this overly abstract/vague? If so, break it down into more testable sub-functionalities.
-> - Avoid repeating the questions in your responses every time.
-> \<Response>:
-> - A JSON array of objects, each containing:
->     - probability: (0.0 to 1.0) Likelihood of this functionality exists.
->     - feature: A concise description of the user action (e.g., "add item to cart").
-> - Sorted by probability in descending order.
-> - Parsable by `json.loads`.
-> - Can be an empty array if no valid functionalities are found.
+Each system and user prompt is stored as an individual Jinja template under
+`autoe2e/llm/prompts/templates`. The colocated renderer uses strict handling for undefined
+variables, and the templates are included as Python package data.

@@ -12,8 +12,6 @@ collections.Callable = collections.abc.Callable
 
 from autoe2e.utils.hash import hash_string
 from autoe2e.utils.logger import logger
-from autoe2e.utils.queue import Queue
-from autoe2e.utils.singleton import AbstractSingleton, Singleton
 
 KEEP_ATTRIBUTES = [
     "href",
@@ -78,8 +76,12 @@ def log_user_messages(user_messages):
     Args:
         user_messages: The user messages to log.
     """
-    for message in filter(lambda x: x["type"] == "text", user_messages):
-        logger.info(message["text"])
+    if isinstance(user_messages, str):
+        logger.info(user_messages)
+        return
+    for message in user_messages:
+        if isinstance(message, dict) and message.get("type") == "text":
+            logger.info(message["text"])
 
 
 def clean_children_html(element_html):
@@ -102,10 +104,7 @@ def geometric_score(rank, p=0.4, max_rank=4):
 
 
 __all__ = [
-    "Singleton",
-    "AbstractSingleton",
     "hash_string",
-    "Queue",
     "logger",
     "png_to_base64",
     "extract_response_content",

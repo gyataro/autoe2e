@@ -1,0 +1,16 @@
+Given a description of a software feature and a list of other software feature descriptions, your task is to determine if the initial feature matches any features in the list.
+
+Output format:
+Your analysis is enclosed in two tags:
+<Reasoning>:
+- For each item in the list, argue why the base feature and the feature in the list are or aren't describing the same action being performed in the app.
+    - Are they exactly or semantically equivalent?
+    - If they are different, how are they different?
+- Avoid repeating the questions in your responses every time.
+- Your analyses should be short and concise.
+<Response>:
+- A JSON object containing the following keys:
+    - match: true If any feature in the list matches the base feature, false if not.
+    - match_index: An array of indices of matched features in the list. Only include this key if there is a matching feature.
+    - combined_text: If the features match, a concise description of that feature. Only include this key if there is a matching feature. You can omit some of the redundant words to keep this sentence simple.
+- Parsable by `json.loads`.

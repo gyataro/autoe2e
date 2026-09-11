@@ -1,4 +1,4 @@
-from playwright.sync_api import Locator, Page
+from playwright.sync_api import Locator
 
 
 def get_element_xpath(element: Locator) -> str:
@@ -26,7 +26,3 @@ def get_element_xpath(element: Locator) -> str:
     """
 
     return element.evaluate(f"element => {{ {xpath_script} }}")
-
-
-def save_screenshot(page: Page, path: str = "/tmp/screenshot.png") -> None:
-    page.screenshot(path=path, full_page=True)

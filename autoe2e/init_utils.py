@@ -16,13 +16,14 @@ def initialize_variables(crawl_context: CrawlContext) -> CrawlContext:
 
     crawl_context.page.goto(crawl_context.settings.base_url)
 
-    crawl_context.crawl_queue.reset()
+    crawl_context.crawl_queue.clear()
     crawl_context.state_machine.reset()
 
     actions: list[Action] = CandidateActionExtractor.extract_candidate_actions(crawl_context.page)
 
     initial_state: State = crawl_context.create_state_from_page(actions)
 
-    crawl_context.crawl_queue.enqueue(initial_state)
+    crawl_context.state_machine.set_initial_state(initial_state)
+    crawl_context.crawl_queue.append(initial_state)
 
     return crawl_context

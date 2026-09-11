@@ -1,3 +1,4 @@
+from collections import deque
 from typing import Self
 
 from playwright.sync_api import Page
@@ -5,14 +6,13 @@ from playwright.sync_api import Page
 from autoe2e.crawler.action import Action
 from autoe2e.crawler.state import State, StateMachine
 from autoe2e.settings import Settings
-from autoe2e.utils import Queue
 
 
 class CrawlContext:
     def __init__(self):
         self.settings: Settings | None = None
         self.page: Page | None = None
-        self.crawl_queue: Queue[State] = Queue()
+        self.crawl_queue: deque[State] = deque()
         self.state_machine: StateMachine = StateMachine()
 
     def set_settings(self, settings: Settings) -> Self:
