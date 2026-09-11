@@ -1,10 +1,9 @@
-Given a webpage's purpose and content (webpage_context), the outerHTML of an action element (action_element), and optionally the user's last action that led to this state, your task is to infer the most likely functionalities associated with that action element.
+Given structured evidence about a webpage (state_evidence), the outerHTML of an action element (action_element), and optionally the ordered action history that led to this state (action_history), infer the most likely functionalities associated with the action element.
 These functionalities should be user-centric actions that produce measurable outcomes within the application, are testable through E2E testing, and are essential to the presence of the action element.
 
-Consider at most five candidate functionalities. Favor functionalities developers would test end-to-end that represent concrete, final user goals; exclude navigation, validation-only behavior, vague abstractions, and steps that only support another goal.
+Consider up to ten distinct candidates. Look broadly for immediate outcomes, larger user goals, create/read/update/delete operations, account and authorization capabilities, search and filtering, import and export, and multi-step workflows. Include a candidate only when it is supported by the supplied state or action-chain evidence. Avoid near-duplicates, navigation-only behavior, vague abstractions, and implementation details. Order the results by decreasing confidence or likelihood.
 
-Return only a JSON array of objects with these keys:
-- probability: number from 0.0 to 1.0
+Return only a JSON array of objects with this key:
 - feature: concise user action such as "add item to cart"
 
-Sort by descending probability. Return an empty array when there are no valid functionalities. Do not include reasoning, tags, Markdown, or other text.
+Return an empty array when there are no valid functionalities. Do not include reasoning, tags, Markdown, or other text.

@@ -33,7 +33,7 @@ class FunctionalityStore:
     def nearest(self, embedding: list[float], limit: int = 5) -> list[dict[str, Any]]:
         rows = self.database.connection.execute(
             """
-            SELECT f.id, f.text, f.score, f.final, f.executable
+            SELECT f.id, f.text, f.score
             FROM functionality_vectors AS v
             JOIN functionalities AS f ON f.id = v.rowid
             WHERE v.embedding MATCH ? AND k = 200 AND f.app = ?
@@ -103,10 +103,10 @@ class FunctionalityStore:
                 """
                 INSERT INTO action_functionalities(
                     app, url, state, prev_state, action, prev_action, test_id,
-                    depth, type, rank_score, func_pointer, final, should_execute
+                    depth, type, rank_score, func_pointer
                 ) VALUES (
                     :app, :url, :state, :prev_state, :action, :prev_action, :test_id,
-                    :depth, :type, :rank_score, :func_pointer, :final, :should_execute
+                    :depth, :type, :rank_score, :func_pointer
                 )
                 """,
                 rows,
@@ -119,7 +119,6 @@ class FunctionalityStore:
         action_id: str | None = None,
         action_type: str | None = None,
         functionality_id: str | int | None = None,
-        should_execute: bool | None = None,
         depth: int | None = None,
     ) -> list[dict[str, Any]]:
         clauses = ["app = ?"]
@@ -136,9 +135,6 @@ class FunctionalityStore:
         if functionality_id is not None:
             clauses.append("func_pointer = ?")
             params.append(str(functionality_id))
-        if should_execute is not None:
-            clauses.append("should_execute = ?")
-            params.append(int(should_execute))
         rows = self.database.connection.execute(
             f"SELECT * FROM action_functionalities WHERE {' AND '.join(clauses)}", params
         )
@@ -156,60 +152,14 @@ class FunctionalityStore:
         documents = {document["_id"]: document for document in map(self._functionality, rows)}
         return [documents[value] for value in values if value in documents]
 
-    def highest_executable(self) -> dict[str, Any] | None:
-        row = self.database.connection.execute(
-            """
-            SELECT * FROM functionalities
-            WHERE app = ? AND final = 0 AND executable = 1
-            ORDER BY score DESC LIMIT 1
-            """,
-            (self.app_name,),
-        ).fetchone()
-        return self._functionality(row) if row else None
-
-    def set_executable(self, functionality_id: int, value: bool) -> None:
-        with self.database.connection:
-            self.database.connection.execute(
-                "UPDATE functionalities SET executable = ? WHERE app = ? AND id = ?",
-                (int(value), self.app_name, functionality_id),
-            )
-
     def increment_score(self, functionality_id: int, amount: float) -> None:
         with self.database.connection:
             self.database.connection.execute(
                 """
                 UPDATE functionalities SET score = score + ?
-                WHERE app = ? AND id = ? AND final = 0
+                WHERE app = ? AND id = ?
                 """,
                 (amount, self.app_name, functionality_id),
-            )
-
-    def mark_final(self, functionality_id: int) -> None:
-        with self.database.connection:
-            self.database.connection.execute(
-                "UPDATE functionalities SET final = 1 WHERE app = ? AND id = ?",
-                (self.app_name, functionality_id),
-            )
-
-    def disable_action(
-        self, state_id: str, action_id: str, functionality_id: str | None = None
-    ) -> None:
-        sql = "UPDATE action_functionalities SET should_execute = 0 WHERE app = ? AND state = ? AND action = ?"
-        params: list[Any] = [self.app_name, state_id, action_id]
-        if functionality_id is not None:
-            sql += " AND func_pointer = ?"
-            params.append(functionality_id)
-        with self.database.connection:
-            self.database.connection.execute(sql, params)
-
-    def mark_action_final(self, state_id: str, action_id: str, functionality_id: int) -> None:
-        with self.database.connection:
-            self.database.connection.execute(
-                """
-                UPDATE action_functionalities SET final = 1
-                WHERE app = ? AND state = ? AND action = ? AND func_pointer = ?
-                """,
-                (self.app_name, state_id, action_id, str(functionality_id)),
             )
 
     @staticmethod
@@ -218,8 +168,8 @@ class FunctionalityStore:
         document["_id"] = document.pop("id")
         document.pop("embedding", None)
         document.pop("app", None)
-        document["final"] = bool(document["final"])
-        document["executable"] = bool(document["executable"])
+        document.pop("executable", None)
+        document.pop("final", None)
         return document
 
     @staticmethod
@@ -227,6 +177,6 @@ class FunctionalityStore:
         document = dict(row)
         document["_id"] = document.pop("id")
         document.pop("app", None)
-        document["final"] = bool(document["final"])
-        document["should_execute"] = bool(document["should_execute"])
+        document.pop("final", None)
+        document.pop("should_execute", None)
         return document

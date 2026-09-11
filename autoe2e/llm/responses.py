@@ -5,10 +5,6 @@ from typing import Any
 _THINK_PATTERN = re.compile(r"<think\b[^>]*>.*?</think\s*>", re.DOTALL | re.IGNORECASE)
 _RESPONSE_PATTERN = re.compile(r"<Response\b[^>]*>(.*?)</Response\s*>", re.DOTALL | re.IGNORECASE)
 _BOOLEAN_PATTERN = re.compile(r"(?:True|False)", re.IGNORECASE)
-_BOOLEAN_LIST_PATTERN = re.compile(
-    r"\[\s*(?:(?:True|False)\s*(?:,\s*(?:True|False)\s*)*)?\]",
-    re.IGNORECASE,
-)
 
 
 def strip_reasoning_content(text: str) -> str:
@@ -58,16 +54,3 @@ def parse_boolean_response(text: str) -> bool:
     if len(matches) != 1:
         raise ValueError(f"Expected exactly one boolean in LLM response, found {len(matches)}")
     return matches[0].lower() == "true"
-
-
-def parse_boolean_list_response(text: str) -> list[bool]:
-    """Parse one unambiguous boolean list, tolerating malformed response tags."""
-    cleaned = strip_reasoning_content(text)
-    response_match = _RESPONSE_PATTERN.search(cleaned)
-    if response_match is not None:
-        cleaned = response_match.group(1).strip()
-
-    matches = _BOOLEAN_LIST_PATTERN.findall(cleaned)
-    if len(matches) != 1:
-        raise ValueError(f"Expected exactly one boolean list in LLM response, found {len(matches)}")
-    return [value.lower() == "true" for value in _BOOLEAN_PATTERN.findall(matches[0])]

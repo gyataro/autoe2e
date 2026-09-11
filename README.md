@@ -55,7 +55,7 @@ run metadata and browser artifacts. `main.py` constructs and injects these depen
 importing a module no longer opens a database connection.
 
 Feature inference is isolated under `autoe2e/features`. `FeatureService` coordinates state-context
-and action-feature extraction, semantic matching, indexing, scoring, and finality. Crawler-specific
+and action-feature extraction, semantic matching, indexing, and scoring. Crawler-specific
 LLM decisions remain under `autoe2e/crawler`: `action_policy.py` guards irreversible actions and
 `form_filling.py` generates values for executable forms.
 

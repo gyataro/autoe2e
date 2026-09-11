@@ -7,7 +7,7 @@ from autoe2e.features.extraction import (
     extract_state_context,
 )
 from autoe2e.features.matching import index_functionalities, link_action
-from autoe2e.features.scoring import mark_final, update_scores
+from autoe2e.features.scoring import update_scores
 from autoe2e.llm import LLMService
 from autoe2e.logger import logger
 from autoe2e.storage import FunctionalityStore
@@ -22,19 +22,22 @@ class FeatureService:
 
     def extract_state_context(
         self,
+        state: State,
         screenshot_path: str | Path,
         previous_state: State | None = None,
         previous_action: Action | None = None,
     ) -> str:
-        return extract_state_context(self.llm, screenshot_path, previous_state, previous_action)
+        return extract_state_context(
+            self.llm, state, screenshot_path, previous_state, previous_action
+        )
 
     def extract_action_functionalities(
         self,
         state: State,
         action: Action,
-        previous_action: Action | None = None,
+        action_history: list[Action] | None = None,
     ) -> list[str]:
-        return extract_action_functionalities(self.llm, state, action, previous_action)
+        return extract_action_functionalities(self.llm, state, action, action_history or [])
 
     def index_functionalities(self, functionalities: list[str]) -> list[int]:
         return index_functionalities(self.llm, self.store, functionalities)
@@ -80,11 +83,8 @@ class FeatureService:
             current_action,
         )
 
-    def mark_final(self, state: State, action: Action) -> None:
-        mark_final(self.llm, self.store, state, action)
-
     def analyze_action(self, state: State, action: Action) -> None:
-        """Extract, index, score, and finalize features for one state action."""
+        """Extract, index, and score features for one state action."""
         logger.info(f"Extracting action scenarios: {action.element.outerHTML}")
         functionalities = self.extract_action_functionalities(state, action)
         if functionalities:
@@ -94,13 +94,12 @@ class FeatureService:
         if len(state.crawl_path) > 0:
             previous_state = state.crawl_path.get_state(-1)
             previous_action = state.crawl_path.get_action(-1)
-            functionalities = self.extract_action_functionalities(state, action, previous_action)
+            action_history = state.crawl_path.get_actions()
+            functionalities = self.extract_action_functionalities(state, action, action_history)
             if functionalities:
                 functionality_ids = self.index_functionalities(functionalities)
-                self._link_state_action(state, action, functionality_ids, "DOUBLE")
+                self._link_state_action(state, action, functionality_ids, "CHAIN")
             self.update_scores(previous_state, previous_action, state, action)
-
-        self.mark_final(state, action)
 
     def _link_state_action(
         self,

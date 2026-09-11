@@ -47,8 +47,6 @@ def link_action(
             "type": action_type,
             "rank_score": geometric_score(rank),
             "func_pointer": str(functionality_id),
-            "final": False,
-            "should_execute": True,
         }
         for rank, functionality_id in enumerate(functionality_ids)
     )

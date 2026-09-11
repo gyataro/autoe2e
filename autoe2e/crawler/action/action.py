@@ -18,7 +18,6 @@ class Action(ABC):
     def __init__(self, element: Element, action_type: ActionType):
         self.element: Element = element
         self.action_type = action_type
-        self.should_execute = True
         self.parent_state_id = None
 
     def get_id_hashed(self):
@@ -32,12 +31,6 @@ class Action(ABC):
 
     def get_element(self) -> Element:
         return self.element
-
-    def set_should_execute(self, should_execute: bool) -> None:
-        self.should_execute = should_execute
-
-    def get_should_execute(self) -> bool:
-        return self.should_execute
 
     def set_parent_state_id(self, parent_state_id: str) -> None:
         self.parent_state_id = parent_state_id

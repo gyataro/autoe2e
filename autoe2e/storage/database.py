@@ -27,9 +27,7 @@ class Database:
                 app TEXT NOT NULL,
                 text TEXT NOT NULL,
                 embedding BLOB NOT NULL,
-                score REAL NOT NULL,
-                final INTEGER NOT NULL DEFAULT 0,
-                executable INTEGER NOT NULL DEFAULT 1
+                score REAL NOT NULL
             );
             CREATE VIRTUAL TABLE IF NOT EXISTS functionality_vectors USING vec0(
                 embedding float[{dimensions}]
@@ -46,9 +44,7 @@ class Database:
                 depth INTEGER NOT NULL,
                 type TEXT NOT NULL,
                 rank_score REAL NOT NULL,
-                func_pointer TEXT NOT NULL,
-                final INTEGER NOT NULL DEFAULT 0,
-                should_execute INTEGER NOT NULL DEFAULT 1
+                func_pointer TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS functionality_app_score
                 ON functionalities(app, score DESC);

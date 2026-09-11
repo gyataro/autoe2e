@@ -88,6 +88,7 @@ def run() -> None:
             screenshot_path = run_store.capture_state(crawl_context.page, current_state)
             logger.info("Extracting state context using LLM")
             state_context = features.extract_state_context(
+                current_state,
                 screenshot_path,
                 current_state.crawl_path.get_state(-1)
                 if len(current_state.crawl_path) > 0
