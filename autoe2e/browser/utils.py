@@ -1,10 +1,7 @@
-from selenium.webdriver.common.by import By
-
-from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.remote.webelement import WebElement
+from playwright.sync_api import Locator, Page
 
 
-def get_element_xpath(driver: WebDriver, element: WebElement) -> str:
+def get_element_xpath(element: Locator) -> str:
     xpath_script = """
         function getPathTo(element) {
             // if (element.id !== '')
@@ -21,23 +18,15 @@ def get_element_xpath(driver: WebDriver, element: WebElement) -> str:
                     ix++;
             }
         }
-        const path = getPathTo(arguments[0]);
+        const path = getPathTo(element);
         if (path.startsWith('id(')) {
             return path;
         }
         return '//' + path;
     """
-    
-    xpath = driver.execute_script(xpath_script, element)
-    return xpath
+
+    return element.evaluate(f"element => {{ {xpath_script} }}")
 
 
-def save_screenshot(driver: WebDriver, path: str = '/tmp/screenshot.png') -> None:
-    # Ref: https://stackoverflow.com/a/52572919/
-    original_size = driver.get_window_size()
-    required_width = driver.execute_script('return document.body.parentNode.scrollWidth')
-    required_height = driver.execute_script('return document.body.parentNode.scrollHeight')
-    driver.set_window_size(required_width, required_height)
-    # driver.save_screenshot(path)  # has scrollbar
-    driver.find_element(By.TAG_NAME, 'body').screenshot(path)  # avoids scrollbar
-    driver.set_window_size(original_size['width'], original_size['height'])
+def save_screenshot(page: Page, path: str = "/tmp/screenshot.png") -> None:
+    page.screenshot(path=path, full_page=True)

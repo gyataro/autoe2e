@@ -4,7 +4,6 @@ from langchain_core.messages import HumanMessage
 
 from .utils import clean_children_html
 
-
 CONTEXT_EXTRACTION_SYSTEM_PROMPT = """
 Given the provided information about a webpage, your task is to provide a brief and abstract description of the webpage's primary purpose or function.
 Output Guidelines:
@@ -97,23 +96,19 @@ Your response should be parsable by json.loads. Just include your response in th
 
 
 def create_simple_user_messages(prompt):
-    return HumanMessage(content=[
-        { "type": "text", "text": prompt }
-    ])
+    return HumanMessage(content=[{"type": "text", "text": prompt}])
 
 
 def create_context_user_messages(text_inputs, base64_image):
-    return HumanMessage(content=[
-        {
-            "type": "text", "text": CONTEXT_EXTRACTION_USER_PROMPT.format(**text_inputs)
-        },
-        {
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:image/png;base64,{base64_image}"
+    return HumanMessage(
+        content=[
+            {"type": "text", "text": CONTEXT_EXTRACTION_USER_PROMPT.format(**text_inputs)},
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/png;base64,{base64_image}"},
             },
-        }
-    ])
+        ]
+    )
 
 
 def create_functionality_user_messages(context, action_element, previous_action=None):
@@ -124,25 +119,27 @@ def create_functionality_user_messages(context, action_element, previous_action=
 
     if previous_action:
         data["previous_action"] = previous_action
-    
-    return HumanMessage(content=[
-        { "type": "text", "text": json.dumps(data) }
-    ])
+
+    return HumanMessage(content=[{"type": "text", "text": json.dumps(data)}])
 
 
 def create_similarity_user_messages(base_functionality, functionalities):
-    return HumanMessage(content=[
-        {
-            "type": "text",
-            "text": f'Base feature:\n{base_functionality}\nThe list of functionalities:\n{functionalities}'
-        }
-    ])
+    return HumanMessage(
+        content=[
+            {
+                "type": "text",
+                "text": f"Base feature:\n{base_functionality}\nThe list of functionalities:\n{functionalities}",
+            }
+        ]
+    )
 
 
 def create_finality_user_messages(context, action_element, functionalities):
-    return HumanMessage(content=[
-        {
-            "type": "text",
-            "text": f'The context of the webpage is: {context}\nThe action element is: {clean_children_html(action_element)}\nThe list of functionalities:\n{functionalities}'
-        }
-    ])
+    return HumanMessage(
+        content=[
+            {
+                "type": "text",
+                "text": f"The context of the webpage is: {context}\nThe action element is: {clean_children_html(action_element)}\nThe list of functionalities:\n{functionalities}",
+            }
+        ]
+    )

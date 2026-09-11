@@ -1,61 +1,61 @@
+import base64
+import collections
 import io
 import re
-import base64
-import numpy as np
-from PIL import Image
 from functools import lru_cache
-from bs4 import BeautifulSoup, Tag
 
-import collections
+import numpy as np
+from bs4 import BeautifulSoup, Tag
+from PIL import Image
+
 collections.Callable = collections.abc.Callable
 
-from autoe2e.utils.singleton import Singleton, AbstractSingleton
 from autoe2e.utils.hash import hash_string
-from autoe2e.utils.queue import Queue
 from autoe2e.utils.logger import logger
-
+from autoe2e.utils.queue import Queue
+from autoe2e.utils.singleton import AbstractSingleton, Singleton
 
 KEEP_ATTRIBUTES = [
-    'href',
-    'src',
-    'alt',
-    'action',
-    'name',
-    'type',
-    'for',
-    'id',
-    'class',
-    'placeholder',
-    'value',
-    'alt',
+    "href",
+    "src",
+    "alt",
+    "action",
+    "name",
+    "type",
+    "for",
+    "id",
+    "class",
+    "placeholder",
+    "value",
+    "alt",
     # input attributes
-    'min',
-    'max',
-    'maxlength',
-    'multiple',
-    'pattern',
-    'required',
-    'readonly',
-    'disabled',
-    'step',
+    "min",
+    "max",
+    "maxlength",
+    "multiple",
+    "pattern",
+    "required",
+    "readonly",
+    "disabled",
+    "step",
     # data attributes
-    'data-testid',
-    'data-formid',
-    'data-submitid'
+    "data-testid",
+    "data-formid",
+    "data-submitid",
 ]
 
 
 def png_to_base64(image_path):
     with open(image_path, "rb") as image_file:
         image_data = image_file.read()
-    
+
     image = Image.open(io.BytesIO(image_data))
     resized_image = image.resize((512, 512))
-    
+
     buffer = io.BytesIO()
     resized_image.save(buffer, format="PNG")
     base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    
+
     return base64_image
 
 
@@ -78,19 +78,19 @@ def log_user_messages(user_messages):
     Args:
         user_messages: The user messages to log.
     """
-    for message in filter(lambda x: x['type'] == 'text', user_messages):
+    for message in filter(lambda x: x["type"] == "text", user_messages):
         logger.info(message["text"])
 
 
 def clean_children_html(element_html):
-    element = BeautifulSoup(element_html, 'html.parser')
-    
+    element = BeautifulSoup(element_html, "html.parser")
+
     for child in element.descendants:
         if isinstance(child, Tag):
             for attr in list(child.attrs):
                 if attr not in KEEP_ATTRIBUTES:
                     del child[attr]
-    
+
     return str(element)
 
 
@@ -102,14 +102,14 @@ def geometric_score(rank, p=0.4, max_rank=4):
 
 
 __all__ = [
-    'Singleton',
-    'AbstractSingleton',
-    'hash_string',
-    'Queue',
-    'logger',
-    'png_to_base64',
-    'extract_response_content',
-    'log_user_messages',
-    'clean_children_html',
-    'geometric_score'
+    "Singleton",
+    "AbstractSingleton",
+    "hash_string",
+    "Queue",
+    "logger",
+    "png_to_base64",
+    "extract_response_content",
+    "log_user_messages",
+    "clean_children_html",
+    "geometric_score",
 ]

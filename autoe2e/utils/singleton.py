@@ -1,4 +1,5 @@
 """The singleton metaclass for ensuring only one instance of a class."""
+
 import abc
 
 
@@ -6,6 +7,7 @@ class Singleton(abc.ABCMeta, type):
     """
     Singleton metaclass for ensuring only one instance of a class.
     """
+
     _instances = {}
 
     def __call__(cls, *args, **kwargs):
@@ -19,4 +21,5 @@ class AbstractSingleton(abc.ABC, metaclass=Singleton):
     """
     Abstract singleton class for ensuring only one instance of a class.
     """
+
     pass

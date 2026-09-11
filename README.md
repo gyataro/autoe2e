@@ -1,24 +1,41 @@
 # AutoE2E
-Source code and benchmark subjects for "AutoE2E: Feature-Driven End-To-End Test Generation."
+Source code for "AutoE2E: Feature-Driven End-To-End Test Generation."
 
 ![AutoE2E Workflow](./workflow.png)
 
 ## Requirements
-Install the required packages using the following command:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then create the
+environment and install the locked dependencies:
+
 ```bash
-pip install -r requirements.txt
+uv sync
+uv run playwright install chromium
 ```
 
 ## Usage
 Before running the project, you need to set the environment variables in the `.env` file. This includes:
 
-1. `APP_NAME`: The name of the application you want to generate E2E test cases for. This needs to match one of the configs in `./configs` folder.
-2. `ANTHROPIC_API_KEY`: The API key for the Anthropic platform. You can get this by signing up at [Anthropic](https://anthropic.com/).
-3. `ATLAS_URI`: The MongoDB Atlas URI for storing the Action-Feature Database (AFD) and Feature Database (FD).
+1. `BASE_URL`: The URL of the application for which you want to generate E2E tests.
+2. `APP_NAME`: An identifier used to namespace that application's database records and report.
+3. `TEMP_DIR`: An optional directory for screenshots and temporary files (defaults to `./tmp`).
+4. `HEADLESS`: Whether Chromium runs without a visible window (defaults to `false`).
+5. `ANTHROPIC_API_KEY`: The API key for the Anthropic platform. You can get this by signing up at [Anthropic](https://anthropic.com/).
+6. `OPENAI_API_KEY`: The API key used for OpenAI models and embeddings.
+7. `ATLAS_URI`: The MongoDB Atlas URI for storing the Action-Feature Database (AFD) and Feature Database (FD).
 
 Then you can run the project using the following command:
+
 ```bash
-python main.py
+uv run python main.py
+```
+
+## Development
+
+Lint and format the Python source with Ruff:
+
+```bash
+uv run ruff check .
+uv run ruff format .
 ```
 
 ## LLM Prompts
@@ -53,27 +70,3 @@ and the following for feature extraction:
 > - Sorted by probability in descending order.
 > - Parsable by `json.loads`.
 > - Can be an empty array if no valid functionalities are found.
-
-
-Furthermore, the baseline prompts are available in `./baseline-prompts.md`.
-
-## Subjects
-The subjects used in our evaluations are available in `./benchmark` folder. Furthermore, the server created for tracking the execution of features is available in `./benchmark/_log-server` folder. You need to have a `Redis` server installed and running to be able to use the server.
-
-To run the server:
-
-```bash
-cd benchmark/_log-server
-
-pip install -r requirements.txt
-
-flask --app extract.py --debug run
-```
-
-### Server Endpoints
-The server has the following endpoints:
-
-1. `/start-evaluate/<app-name>`: Start the coverage evaluation for the given application.
-2. `/end-evaluate`: End the coverage evaluation for the given application. It will return the coverage rate.
-
-To test the server, you can run the `PetClinic` application located in `./benchmark/pet-clinic` and use the server.

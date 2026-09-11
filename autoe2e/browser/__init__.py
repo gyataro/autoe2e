@@ -1,6 +1,5 @@
-from autoe2e.browser.driver import get_driver_container
-
+from autoe2e.browser.session import BrowserSession
 
 __all__ = [
-    'get_driver_container',
+    "BrowserSession",
 ]

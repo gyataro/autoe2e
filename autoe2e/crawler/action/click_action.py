@@ -1,35 +1,25 @@
-from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.common.action_chains import ActionChains
+from playwright.sync_api import Page, TimeoutError
 
 from autoe2e.crawler.action.action import Action, ActionType
 from autoe2e.crawler.action.element import Element
-from selenium.common.exceptions import TimeoutException
-import sys
 
 
 class ClickActionType(ActionType):
     def __init__(self):
-        super().__init__('click')
+        super().__init__("click")
 
 
 class ClickAction(Action):
     def __init__(self, element: Element):
         super().__init__(element, action_type=ClickActionType())
-    
-    
-    def execute(self, driver: WebDriver) -> None:
+
+    def execute(self, page: Page) -> None:
         try:
-            element = self.element.get(driver)
-            driver.execute_script("arguments[0].scrollIntoView(true);", element)
-            ActionChains(driver).move_to_element(element).click(element).perform()
-            
-        except TimeoutException as toe:
-            print(driver.current_url)
-            print(toe)
-            print("-----")
-            print(str(toe))
-            print("-----")
-            print(toe.args)
+            element = self.element.get(page)
+            element.scroll_into_view_if_needed()
+            element.click()
+        except TimeoutError as error:
+            print(page.url)
+            print(error)
             print("ELEMENT ID:", self.element.get_id())
-            driver.quit()
-            sys.exit(1)
+            raise
