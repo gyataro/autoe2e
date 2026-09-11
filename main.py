@@ -9,6 +9,7 @@ from autoe2e.crawler.state import State, StateIdEvaluator
 from autoe2e.features import FeatureService
 from autoe2e.llm import LLMService
 from autoe2e.logger import logger
+from autoe2e.remote import RemoteSession, wait_for_startup_intervention
 from autoe2e.settings import Settings
 from autoe2e.storage import Database, FunctionalityStore, RunStore
 
@@ -28,6 +29,7 @@ def run() -> None:
     database = Database(settings.database_path, llm.embedding_dimensions)
     functionality_store = FunctionalityStore(database, settings.app_name)
     browser_session = None
+    remote_session = None
     run_store = None
 
     try:
@@ -44,7 +46,14 @@ def run() -> None:
             database,
         )
         features = FeatureService(llm, functionality_store)
-        browser_session = BrowserSession.start(settings)
+        if settings.remote_view_enabled:
+            remote_session = RemoteSession.start(run_store.run_dir / "remote")
+        browser_session = BrowserSession.start(
+            settings,
+            display=remote_session.display if remote_session is not None else None,
+        )
+        if settings.remote_startup_intervention:
+            wait_for_startup_intervention(browser_session.page, settings.base_url)
         crawl_context = CrawlContext(settings, browser_session.page)
         run_store.attach_page(browser_session.page)
 
@@ -174,6 +183,11 @@ def run() -> None:
 
         run_path = run_store.finish_run()
         logger.info(f"Completed crawl indexed by {run_path}")
+    except KeyboardInterrupt:
+        logger.warning("Crawl interrupted by user")
+        if run_store is not None:
+            run_store.fail_run("Interrupted by user")
+        raise
     except Exception as error:
         logger.exception(f"Crawl run failed: {error}")
         if run_store is not None:
@@ -185,8 +199,12 @@ def run() -> None:
             if browser_session is not None:
                 browser_session.close()
         finally:
-            logger.close_run()
-            database.close()
+            try:
+                if remote_session is not None:
+                    remote_session.close()
+            finally:
+                logger.close_run()
+                database.close()
 
 
 if __name__ == "__main__":

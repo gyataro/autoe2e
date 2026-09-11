@@ -23,6 +23,9 @@ Before running the project, configure the target application and models in `.env
    search.
 5. `EMBEDDING_BASE_URL` and `EMBEDDING_API_KEY`: Optional overrides when embeddings use a
    different endpoint; otherwise the corresponding LLM connection values are reused.
+6. `REMOTE_VIEW_ENABLED`: Set to `true` to expose the headed crawl browser through noVNC.
+7. `REMOTE_STARTUP_INTERVENTION`: Set to `true` to pause before crawling so a human can
+   authenticate or prepare the application in that browser. This requires remote viewing.
 
 The application derives its namespace from the target domain and writes to `./output`. Browser
 mode, database location, model timeouts, retries, token limits, and temperature are maintained as
@@ -37,6 +40,33 @@ Then you can run the project using the following command:
 ```bash
 uv run python main.py
 ```
+
+### Remote browser and startup intervention
+
+The Docker image packages Chromium, Xvfb, x11vnc, noVNC, and websockify. Start an interactive
+container so the startup intervention can wait for Enter:
+
+```bash
+docker build -t autoe2e .
+docker run --rm -it --env-file .env --shm-size=1g \
+  --user "$(id -u):$(id -g)" \
+  -v "$PWD/output:/app/output" \
+  -p 127.0.0.1:6080:6080 \
+  autoe2e
+```
+
+From your computer, open an SSH tunnel to the server:
+
+```bash
+ssh -N -L 6080:127.0.0.1:6080 <user>@<server>
+```
+
+Then visit `http://127.0.0.1:6080/vnc.html?autoconnect=true&resize=scale`. When startup
+intervention is enabled, authenticate or prepare the application in the remote browser, return to
+the AutoE2E terminal, and press Enter. Crawling continues in the same live browser context; no
+cookie or authentication-state file is written. Keep port 6080 bound to loopback and do not expose
+the VNC port. Running as your host UID and GID keeps bind-mounted crawl artifacts owned by your
+SSH user.
 
 Each crawl writes state snapshots and transition network logs below
 `output/<domain>/runs/<run-id>/`. SQLite is the authoritative graph and artifact index; a small

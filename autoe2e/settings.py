@@ -6,7 +6,18 @@ from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 OUTPUT_DIR = "./output"
-HEADLESS = False
+
+
+def _environment_boolean(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"{name} must be one of: true, false, 1, 0, yes, no, on, off")
 
 
 @dataclass(frozen=True)
@@ -18,6 +29,12 @@ class Settings:
     llm_api_key: str | None = field(default=None, repr=False)
     embedding_base_url: str | None = None
     embedding_api_key: str | None = field(default=None, repr=False)
+    remote_view_enabled: bool = False
+    remote_startup_intervention: bool = False
+
+    def __post_init__(self) -> None:
+        if self.remote_startup_intervention and not self.remote_view_enabled:
+            raise ValueError("REMOTE_STARTUP_INTERVENTION requires REMOTE_VIEW_ENABLED=true")
 
     @property
     def app_name(self) -> str:
@@ -29,7 +46,7 @@ class Settings:
 
     @property
     def headless(self) -> bool:
-        return HEADLESS
+        return not self.remote_view_enabled
 
     @property
     def domain(self) -> str:
@@ -64,4 +81,6 @@ class Settings:
             llm_api_key=os.getenv("LLM_API_KEY") or None,
             embedding_base_url=os.getenv("EMBEDDING_BASE_URL") or os.getenv("LLM_BASE_URL") or None,
             embedding_api_key=os.getenv("EMBEDDING_API_KEY") or os.getenv("LLM_API_KEY") or None,
+            remote_view_enabled=_environment_boolean("REMOTE_VIEW_ENABLED"),
+            remote_startup_intervention=_environment_boolean("REMOTE_STARTUP_INTERVENTION"),
         )

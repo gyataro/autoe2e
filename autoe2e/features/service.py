@@ -39,8 +39,18 @@ class FeatureService:
     ) -> list[str]:
         return extract_action_functionalities(self.llm, state, action, action_history or [])
 
-    def index_functionalities(self, functionalities: list[str]) -> list[int]:
-        return index_functionalities(self.llm, self.store, functionalities)
+    def index_functionalities(
+        self,
+        functionalities: list[str],
+        *,
+        initial_score: float | None = None,
+    ) -> list[int]:
+        return index_functionalities(
+            self.llm,
+            self.store,
+            functionalities,
+            initial_score=initial_score,
+        )
 
     def link_action(
         self,
@@ -97,7 +107,7 @@ class FeatureService:
             action_history = state.crawl_path.get_actions()
             functionalities = self.extract_action_functionalities(state, action, action_history)
             if functionalities:
-                functionality_ids = self.index_functionalities(functionalities)
+                functionality_ids = self.index_functionalities(functionalities, initial_score=0.0)
                 self._link_state_action(state, action, functionality_ids, "CHAIN")
             self.update_scores(previous_state, previous_action, state, action)
 

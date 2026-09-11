@@ -29,7 +29,7 @@ class RunLogger:
         self._file_handler.setFormatter(
             logging.Formatter(
                 "%(asctime)s %(levelname)s %(name)s %(message)s",
-                datefmt="%Y-%m-%dT%H:%M:%S%z",
+                datefmt="%Y-%m-%dT%H:%M:%S",
             )
         )
         self._logger.addHandler(self._file_handler)

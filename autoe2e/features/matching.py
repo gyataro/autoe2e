@@ -14,10 +14,20 @@ def index_functionalities(
     llm: LLMService,
     store: FunctionalityStore,
     functionalities: list[str],
+    *,
+    initial_score: float | None = None,
 ) -> list[int]:
     embeddings = llm.embeddings.embed_documents(functionalities)
     return [
-        _resolve_match(llm, store, rank, text, embedding, store.nearest(embedding))
+        _resolve_match(
+            llm,
+            store,
+            rank,
+            text,
+            embedding,
+            store.nearest(embedding),
+            geometric_score(rank) if initial_score is None else initial_score,
+        )
         for rank, (text, embedding) in enumerate(zip(functionalities, embeddings))
     ]
 
@@ -59,6 +69,7 @@ def _resolve_match(
     text: str,
     embedding: list[float],
     candidates: list[dict[str, Any]],
+    initial_score: float,
 ) -> int:
     exact_indices = [
         index for index, candidate in enumerate(candidates) if candidate["text"] == text
@@ -87,7 +98,7 @@ def _resolve_match(
             decision.update(match=True, match_index=exact_indices, combined_text=text)
 
     if not decision["match"]:
-        return store.create(text, embedding, geometric_score(rank))
+        return store.create(text, embedding, initial_score)
 
     match_ids = [candidates[index]["_id"] for index in decision["match_index"]]
     combined_text = decision.get("combined_text", text)

@@ -1,3 +1,5 @@
+import os
+
 from playwright.sync_api import Browser, BrowserContext, Page, Playwright, sync_playwright
 
 from autoe2e.logger import logger
@@ -19,13 +21,19 @@ class BrowserSession:
         self._closed = False
 
     @classmethod
-    def start(cls, settings: Settings) -> "BrowserSession":
+    def start(cls, settings: Settings, display: str | None = None) -> "BrowserSession":
         """Start Playwright and return a fully initialized browser session."""
         logger.info("Initializing browser")
         playwright = sync_playwright().start()
         browser = None
         try:
-            browser = playwright.chromium.launch(headless=settings.headless)
+            launch_environment = None
+            if display is not None:
+                launch_environment = {**os.environ, "DISPLAY": display}
+            browser = playwright.chromium.launch(
+                headless=settings.headless,
+                env=launch_environment,
+            )
             context = browser.new_context()
             context.set_default_timeout(10_000)
             page = context.new_page()
