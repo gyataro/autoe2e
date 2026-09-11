@@ -41,6 +41,13 @@ class StateGraph(Generic[S, A]):
         """
         return self.states.get(state_id, None)
 
+    def find_equivalent_state(self, candidate: S) -> S | None:
+        """Return the canonical state equivalent to ``candidate``, if present."""
+        exact = self.get_state(candidate.get_id())
+        if exact is not None:
+            return exact
+        return next((state for state in self.states.values() if state == candidate), None)
+
     def get_outgoing_actions(self, state: S) -> list[A]:
         """
         Returns the actions that can be taken from the given state.

@@ -1,14 +1,13 @@
-from ast import literal_eval
-
 from autoe2e.crawler.action import Action
 from autoe2e.crawler.state import State, StateIdEvaluator
+from autoe2e.features.ranking import geometric_score
 from autoe2e.llm import LLMService
 from autoe2e.llm.prompts import (
     FINALITY_SYSTEM_PROMPT,
     create_finality_user_messages,
 )
+from autoe2e.llm.responses import parse_boolean_list_response
 from autoe2e.storage import FunctionalityStore
-from autoe2e.utils import extract_response_content, geometric_score
 
 
 def update_scores(
@@ -56,7 +55,7 @@ def mark_final(
             "\n".join(item["text"] for item in functionalities),
         ),
     )
-    finality = literal_eval(extract_response_content(response))
+    finality = parse_boolean_list_response(response)
     for functionality, is_final in zip(functionalities, finality):
         if is_final:
             store.mark_final(functionality["_id"])

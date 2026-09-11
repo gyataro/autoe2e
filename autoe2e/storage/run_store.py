@@ -9,12 +9,13 @@ from urllib.parse import unquote, urlparse
 
 from playwright.sync_api import Page
 
+from autoe2e.browser.html import clean_children_html
 from autoe2e.browser.network import NetworkRecorder
 from autoe2e.browser.snapshot import capture_page_snapshot
 from autoe2e.crawler.action import Action
 from autoe2e.crawler.state import State, StateIdEvaluator
+from autoe2e.logger import logger
 from autoe2e.storage.database import Database
-from autoe2e.utils import clean_children_html, hash_string, logger
 
 SCHEMA_VERSION = "1.0"
 
@@ -47,7 +48,8 @@ class RunStore:
     ):
         timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         self.domain_dir = Path(output_dir) / domain
-        self.run_id = f"{timestamp}-{hash_string(_utc_now())[:8]}"
+        run_hash = hashlib.sha256(_utc_now().encode()).hexdigest()
+        self.run_id = f"{timestamp}-{run_hash[:8]}"
         self.run_dir = self.domain_dir / "runs" / self.run_id
         self.states_dir = self.run_dir / "states"
         self.transitions_dir = self.run_dir / "transitions"
@@ -151,7 +153,8 @@ class RunStore:
             self.write_state_metadata(source_state)
         if target_state is not None:
             self.write_state_metadata(target_state)
-        digest = hash_string(f"{source_id}:{action_id}:{target_id}:{self.transition_count}")[:12]
+        transition_key = f"{source_id}:{action_id}:{target_id}:{self.transition_count}"
+        digest = hashlib.sha256(transition_key.encode()).hexdigest()[:12]
         transition_id = f"{self.transition_count:06d}-{digest}"
         transition_dir = self.transitions_dir / transition_id
         transition_dir.mkdir()
@@ -400,6 +403,7 @@ class RunStore:
             decoded = unquote(raw_segment)
             safe = re.sub(r"[^A-Za-z0-9._-]+", "_", decoded).strip(".") or "_"
             if len(safe) > 64:
-                safe = f"{safe[:48]}-{hash_string(decoded)[:12]}"
+                digest = hashlib.sha256(decoded.encode()).hexdigest()[:12]
+                safe = f"{safe[:48]}-{digest}"
             safe_segments.append(safe)
         return safe_segments

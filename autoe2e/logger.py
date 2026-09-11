@@ -1,3 +1,5 @@
+"""Run-scoped application logging."""
+
 import logging
 import sys
 from pathlib import Path

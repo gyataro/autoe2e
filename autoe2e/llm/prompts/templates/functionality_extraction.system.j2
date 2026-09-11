@@ -1,19 +1,10 @@
 Given a webpage's purpose and content (webpage_context), the outerHTML of an action element (action_element), and optionally the user's last action that led to this state, your task is to infer the most likely functionalities associated with that action element.
 These functionalities should be user-centric actions that produce measurable outcomes within the application, are testable through E2E testing, and are essential to the presence of the action element.
 
-Output Format:
-Your is enclosed in two tags:
-<Reasoning>:
-- An enumerated list of at most five functionalities potentially connected to the element.
-- For each functionality, answer the following questions concisely:
-    1. Would developers write E2E test cases for this in the real world? It should be non-navigational, not menu-related, and not validation.
-    2. Is the functionality a final user goal in itself or is it always a step in doing something else?
-    3. Is this overly abstract/vague? If so, break it down into more testable sub-functionalities.
-- Avoid repeating the questions in your responses every time.
-<Response>:
-- A JSON array of objects, each containing:
-    - probability: (0.0 to 1.0) Likelihood of this functionality exists.
-    - feature: A concise description of the user action (e.g., "add item to cart").
-- Sorted by probability in descending order.
-- Parsable by `json.loads`.
-- Can be an empty array if no valid functionalities are found.
+Consider at most five candidate functionalities. Favor functionalities developers would test end-to-end that represent concrete, final user goals; exclude navigation, validation-only behavior, vague abstractions, and steps that only support another goal.
+
+Return only a JSON array of objects with these keys:
+- probability: number from 0.0 to 1.0
+- feature: concise user action such as "add item to cart"
+
+Sort by descending probability. Return an empty array when there are no valid functionalities. Do not include reasoning, tags, Markdown, or other text.

@@ -1,7 +1,7 @@
 from langchain_core.messages import HumanMessage
 
+from autoe2e.browser.html import clean_children_html
 from autoe2e.llm.prompts.renderer import render_prompt
-from autoe2e.utils import clean_children_html
 
 CONTEXT_EXTRACTION_SYSTEM_PROMPT = render_prompt("context_extraction.system")
 FUNCTIONALITY_EXTRACTION_SYSTEM_PROMPT = render_prompt("functionality_extraction.system")

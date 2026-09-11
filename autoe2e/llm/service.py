@@ -9,14 +9,31 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-from autoe2e.llm.settings import LLMSettings
-from autoe2e.utils import log_user_messages, logger
+from autoe2e.llm.responses import strip_reasoning_content
+from autoe2e.logger import logger
+from autoe2e.settings import Settings
+
+TEMPERATURE = 0.0
+MAX_TOKENS = 1024
+TIMEOUT_SECONDS = 120.0
+MAX_RETRIES = 2
+EMBEDDING_DIMENSION_PROBE = "Determine embedding dimensions."
+MODEL_PROVIDER = "openai"
+
+
+def _log_user_messages(user_messages: Any) -> None:
+    if isinstance(user_messages, str):
+        logger.info(user_messages)
+        return
+    for message in user_messages:
+        if isinstance(message, dict) and message.get("type") == "text":
+            logger.info(message["text"])
 
 
 class LLMService:
     def __init__(
         self,
-        settings: LLMSettings,
+        settings: Settings,
         chat_model: BaseChatModel | None = None,
         embeddings: Embeddings | None = None,
     ):
@@ -27,22 +44,30 @@ class LLMService:
         self.embeddings = (
             embeddings if embeddings is not None else self._create_embeddings(settings)
         )
+        self._embedding_dimensions: int | None = None
 
-    @classmethod
-    def from_env(cls) -> "LLMService":
-        return cls(LLMSettings.from_env())
+    @property
+    def embedding_dimensions(self) -> int:
+        """Return the configured model's vector size, probing it once if necessary."""
+        if self._embedding_dimensions is None:
+            vector = self.embeddings.embed_query(EMBEDDING_DIMENSION_PROBE)
+            if not vector:
+                raise ValueError("The embedding model returned an empty vector")
+            self._embedding_dimensions = len(vector)
+        return self._embedding_dimensions
 
     def invoke(self, system_prompt: str, user_message: HumanMessage) -> str:
         logger.info("Prompt:")
-        log_user_messages(user_message.content)
+        _log_user_messages(user_message.content)
 
         prompt = ChatPromptTemplate.from_messages(
             [SystemMessage(content=system_prompt), user_message]
         )
         callback = UsageMetadataCallbackHandler()
-        response = (prompt | self.chat_model | StrOutputParser()).invoke(
+        raw_response = (prompt | self.chat_model | StrOutputParser()).invoke(
             {}, config={"callbacks": [callback]}
         )
+        response = strip_reasoning_content(raw_response)
 
         logger.info("Response:")
         logger.info(response)
@@ -51,24 +76,32 @@ class LLMService:
         return response
 
     @staticmethod
-    def _create_chat_model(settings: LLMSettings) -> BaseChatModel:
+    def _create_chat_model(settings: Settings) -> BaseChatModel:
         options: dict[str, Any] = {
-            "temperature": settings.temperature,
-            "max_tokens": settings.max_tokens,
-            "timeout": settings.timeout,
-            "max_retries": settings.max_retries,
+            "temperature": TEMPERATURE,
+            "max_tokens": MAX_TOKENS,
+            "timeout": TIMEOUT_SECONDS,
+            "max_retries": MAX_RETRIES,
         }
-        if settings.base_url:
-            options["base_url"] = settings.base_url
-        if settings.api_key:
-            options["api_key"] = settings.api_key
-        return init_chat_model(settings.model, **options)
+        if settings.llm_base_url:
+            options["base_url"] = settings.llm_base_url
+        if settings.llm_api_key:
+            options["api_key"] = settings.llm_api_key
+        return init_chat_model(
+            model=settings.llm_model,
+            model_provider=MODEL_PROVIDER,
+            **options,
+        )
 
     @staticmethod
-    def _create_embeddings(settings: LLMSettings) -> Embeddings:
+    def _create_embeddings(settings: Settings) -> Embeddings:
         options: dict[str, Any] = {}
         if settings.embedding_base_url:
             options["base_url"] = settings.embedding_base_url
         if settings.embedding_api_key:
             options["api_key"] = settings.embedding_api_key
-        return init_embeddings(settings.embedding_model, **options)
+        return init_embeddings(
+            model=settings.embedding_model,
+            provider=MODEL_PROVIDER,
+            **options,
+        )

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from autoe2e.crawler.action import Action
-from autoe2e.crawler.state import State
+from autoe2e.crawler.state import State, StateIdEvaluator
 from autoe2e.features.extraction import (
     extract_action_functionalities,
     extract_state_context,
@@ -9,6 +9,7 @@ from autoe2e.features.extraction import (
 from autoe2e.features.matching import index_functionalities, link_action
 from autoe2e.features.scoring import mark_final, update_scores
 from autoe2e.llm import LLMService
+from autoe2e.logger import logger
 from autoe2e.storage import FunctionalityStore
 
 
@@ -81,3 +82,50 @@ class FeatureService:
 
     def mark_final(self, state: State, action: Action) -> None:
         mark_final(self.llm, self.store, state, action)
+
+    def analyze_action(self, state: State, action: Action) -> None:
+        """Extract, index, score, and finalize features for one state action."""
+        logger.info(f"Extracting action scenarios: {action.element.outerHTML}")
+        functionalities = self.extract_action_functionalities(state, action)
+        if functionalities:
+            functionality_ids = self.index_functionalities(functionalities)
+            self._link_state_action(state, action, functionality_ids, "SINGLE")
+
+        if len(state.crawl_path) > 0:
+            previous_state = state.crawl_path.get_state(-1)
+            previous_action = state.crawl_path.get_action(-1)
+            functionalities = self.extract_action_functionalities(state, action, previous_action)
+            if functionalities:
+                functionality_ids = self.index_functionalities(functionalities)
+                self._link_state_action(state, action, functionality_ids, "DOUBLE")
+            self.update_scores(previous_state, previous_action, state, action)
+
+        self.mark_final(state, action)
+
+    def _link_state_action(
+        self,
+        state: State,
+        action: Action,
+        functionality_ids: list[int],
+        action_type: str,
+    ) -> None:
+        has_previous_action = len(state.crawl_path) > 0
+        previous_state_id = (
+            state.crawl_path.get_state(-1).get_id(StateIdEvaluator.BY_ACTIONS)
+            if has_previous_action
+            else None
+        )
+        previous_action_id = (
+            state.crawl_path.get_action(-1).get_id() if has_previous_action else None
+        )
+        self.link_action(
+            functionality_ids,
+            state_id=state.get_id(StateIdEvaluator.BY_ACTIONS),
+            state_url=state.url,
+            previous_state_id=previous_state_id,
+            action_id=action.get_id(),
+            previous_action_id=previous_action_id,
+            action_test_id=action.element.test_id,
+            action_depth=len(state.crawl_path),
+            action_type=action_type,
+        )

@@ -1,9 +1,9 @@
+import hashlib
 import uuid
 from enum import Enum
 
 from autoe2e.crawler.action import Action
 from autoe2e.crawler.state.crawl_path import CrawlPath
-from autoe2e.utils import hash_string
 
 
 class StateIdEvaluator(Enum):
@@ -60,12 +60,11 @@ class State:
             return self.url
 
         if evaluator == StateIdEvaluator.BY_DOM:
-            return hash_string(self.dom)
+            return hashlib.sha256(self.dom.encode()).hexdigest()
 
         if evaluator == StateIdEvaluator.BY_ACTIONS:
-            return hash_string(
-                f"""{self.url}-{"-".join(sorted([action.get_id() for action in self.actions]))}"""
-            )
+            action_ids = "-".join(sorted(action.get_id() for action in self.actions))
+            return hashlib.sha256(f"{self.url}-{action_ids}".encode()).hexdigest()
 
         # Default, None, or BY_UNIQUE
         return self.unique_id

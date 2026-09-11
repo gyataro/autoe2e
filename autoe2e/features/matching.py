@@ -1,13 +1,13 @@
-import json
 from typing import Any
 
+from autoe2e.features.ranking import geometric_score
 from autoe2e.llm import LLMService
 from autoe2e.llm.prompts import (
     SIMILARITY_SYSTEM_PROMPT,
     create_similarity_user_messages,
 )
+from autoe2e.llm.responses import parse_json_response
 from autoe2e.storage import FunctionalityStore
-from autoe2e.utils import extract_response_content, geometric_score
 
 
 def index_functionalities(
@@ -77,7 +77,9 @@ def _resolve_match(
                 text, "\n".join(candidate["text"] for candidate in candidates)
             ),
         )
-        decision = json.loads(extract_response_content(response))
+        decision = parse_json_response(response)
+        if not isinstance(decision, dict) or not isinstance(decision.get("match"), bool):
+            raise ValueError("Expected similarity decision to be a JSON object with match")
         if "match_index" in decision:
             indices = decision["match_index"]
             if isinstance(indices, int):

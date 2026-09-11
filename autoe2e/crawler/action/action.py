@@ -1,9 +1,9 @@
+import hashlib
 from abc import ABC, abstractmethod
 
 from playwright.sync_api import Page
 
 from autoe2e.crawler.action.element import Element
-from autoe2e.utils import hash_string
 
 
 class ActionType:
@@ -22,7 +22,7 @@ class Action(ABC):
         self.parent_state_id = None
 
     def get_id_hashed(self):
-        return hash_string(self.element.get_id())
+        return hashlib.sha256(self.element.get_id().encode()).hexdigest()
 
     def get_id(self):
         return self.element.get_id()

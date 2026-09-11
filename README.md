@@ -13,22 +13,24 @@ uv run playwright install chromium
 ```
 
 ## Usage
-Before running the project, you need to set the environment variables in the `.env` file. This includes:
+Before running the project, configure the target application and models in `.env`:
 
 1. `BASE_URL`: The URL of the application for which you want to generate E2E tests.
-2. `APP_NAME`: An identifier used to namespace that application's local database records.
-3. `OUTPUT_DIR`: The root for domain-scoped crawl artifacts (defaults to `./output`).
-4. `HEADLESS`: Whether Chromium runs without a visible window (defaults to `false`).
-5. `LLM_MODEL`: The single LangChain `provider:model` identifier used for every chat inference.
-   Because state context uses screenshots, this model must support image input.
-6. `LLM_BASE_URL` and `LLM_API_KEY`: Optional connection settings for a local or hosted model.
-7. `LLM_TEMPERATURE`, `LLM_MAX_TOKENS`, `LLM_TIMEOUT`, and `LLM_MAX_RETRIES`: Optional invocation
-   settings.
-8. `EMBEDDING_MODEL` and `EMBEDDING_DIMENSIONS`: The embedding model and its exact output size.
-9. `EMBEDDING_BASE_URL` and `EMBEDDING_API_KEY`: Optional local embedding endpoint settings.
-10. Provider-specific keys such as `OPENAI_API_KEY` remain supported by LangChain integrations.
-11. `DATABASE_PATH`: An optional SQLite database path. By default it is
-   `output/<domain>/autoe2e.sqlite3`.
+2. `LLM_MODEL`: The Hugging Face-style model identifier or local server alias used for every chat
+   inference. Because state context uses screenshots, this model must support image input.
+3. `LLM_BASE_URL` and `LLM_API_KEY`: Connection settings for the chat model.
+4. `EMBEDDING_MODEL`: The Hugging Face-style model identifier or local server alias used for vector
+   search.
+5. `EMBEDDING_BASE_URL` and `EMBEDDING_API_KEY`: Optional overrides when embeddings use a
+   different endpoint; otherwise the corresponding LLM connection values are reused.
+
+The application derives its namespace from the target domain and writes to `./output`. Browser
+mode, database location, model timeouts, retries, token limits, and temperature are maintained as
+internal developer settings rather than environment options.
+
+AutoE2E communicates with both models through an OpenAI-compatible API. The provider adapter is
+selected internally, so model names should not include an `openai:` prefix. `LLM_BASE_URL`
+determines where the models are hosted; a separate embedding endpoint remains optional.
 
 Then you can run the project using the following command:
 
@@ -44,8 +46,8 @@ for the complete schema. Functionality and action mappings use the same local da
 Each run writes all log levels to its single `run.log` file in the same run directory.
 
 All analysis and classification tasks share the same configured chat model. The embedding model
-remains separate because it produces vectors rather than chat responses, and its configured
-dimension defines the `sqlite-vec` index schema.
+remains separate because it produces vectors rather than chat responses. AutoE2E probes it once at
+startup and uses the returned vector size to initialize the `sqlite-vec` index schema.
 
 Persistence is isolated under `autoe2e/storage`: `Database` owns the SQLite connection and schema,
 `FunctionalityStore` exposes functionality and action-index operations, and `RunStore` serializes
